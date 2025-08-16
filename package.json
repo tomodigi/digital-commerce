@@ -23,10 +23,14 @@
 		"svelte": "^5.38.1",
 		"svelte-check": "^4.3.1",
 		"tailwind-merge": "^3.3.1",
-		"tailwind-variants": "2.1.0",
+		"tailwind-variants": "^1.0.0",
 		"tailwindcss": "^4.1.12",
 		"tw-animate-css": "^1.3.6",
 		"typescript": "^5.9.2",
 		"vite": "^7.1.2"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.55.0",
+		"zod": "^4.0.17"
 	}
 }
