@@ -1,6 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
-import { supabase } from '$lib/supabase/client';
+import type { Actions, PageServerLoad } from './$types';
 import { z } from 'zod';
 
 const registerSchema = z
@@ -20,8 +19,19 @@ const registerSchema = z
         path: ['confirmPassword']
     });
 
+export const load: PageServerLoad = async ({ locals }) => {
+    const { data: { session } } = await locals.supabase.auth.getSession();
+
+    if (session) {
+        throw redirect(303, '/');
+    }
+
+    return {};
+};
+
 export const actions: Actions = {
-    default: async ({ request }) => {
+
+    register: async ({ request, locals }) => {
         const formData = Object.fromEntries(await request.formData());
 
         const result = registerSchema.safeParse(formData);
@@ -38,7 +48,7 @@ export const actions: Actions = {
 
         const { email, password, fullName, username } = result.data;
 
-        const { error } = await supabase.auth.signUp({
+        const { error } = await locals.supabase.auth.signUp({
             email,
             password,
             options: {
@@ -53,6 +63,35 @@ export const actions: Actions = {
             return fail(500, { success: false, message: error.message });
         }
 
-        return { success: true, message: 'Registration successful' };
+        // Return success with form data to trigger the alert
+        return {
+            success: true,
+            message: 'Registration successful',
+            form: {
+                success: true
+            }
+        };
+    },
+
+    registerWithGoogle: async ({ locals, url }) => {
+        const { data, error } = await locals.supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${url.origin}`,
+            },
+        });
+
+        if (error) {
+            console.error('Error signing in with Google:', error);
+            return fail(500, { success: false, message: 'Server error. Could not sign in with Google.' });
+        }
+
+        // If the URL is available, redirect the user to it.
+        if (data.url) {
+            throw redirect(303, data.url);
+        }
+
+        // Fallback in case the URL is not provided for some reason.
+        return fail(500, { success: false, message: 'Could not get Google sign-in URL.' });
     }
 };

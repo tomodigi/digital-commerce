@@ -1,17 +1,25 @@
-// src/lib/supabaseClient.ts
+// src/lib/supabase/client.ts
 
-import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { browser } from '$app/environment'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public'
 
-// Inisialisasi Supabase client
-export const supabase = createClient(
-    PUBLIC_SUPABASE_URL,
-    PUBLIC_SUPABASE_ANON_KEY,
-    {
-        auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true,
-        }
-    }
-);
+let client: SupabaseClient | null = null
+
+export async function getSupabase(): Promise<SupabaseClient> {
+  if (!browser) {
+    throw new Error('Supabase client is only available in the browser')
+  }
+  if (!client) {
+    // Use ESM import to avoid require in the browser
+    const { createBrowserClient } = await import('@supabase/ssr')
+    client = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false, // Disable Supabase's built-in URL session detection
+      },
+    }) as unknown as SupabaseClient
+  }
+  return client
+}
