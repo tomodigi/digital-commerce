@@ -76,7 +76,7 @@
 						<div class="flex items-center">
 							<Label for="password">Password</Label>
 							<a
-								href="##"
+								href="/login/forgot"
 								class="ml-auto text-sm underline-offset-2 hover:underline"
 							>
 								Forgot your password?
