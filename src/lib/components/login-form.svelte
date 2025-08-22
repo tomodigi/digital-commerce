@@ -50,7 +50,7 @@
 					<div class="flex flex-col items-center text-center">
 						<h1 class="text-2xl font-bold">Welcome back</h1>
 						<p class="text-muted-foreground text-balance">
-							Login to your Acme Inc account
+							Login to your Digital Commerce account
 						</p>
 					</div>
 
