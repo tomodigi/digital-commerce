@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     import { Button } from "$lib/components/ui/button/index.js";
+    import type { PageData } from "./$types";
 
     import Header from "$lib/components/header.svelte";
     import HeroSection from "$lib/components/hero-section.svelte";
@@ -8,8 +8,8 @@
     import TestimonialsSection from "$lib/components/testimonials-section.svelte";
     import Footer from "$lib/components/footer.svelte";
 
-    $: user = $page.data.user;
-    $: userEmail = user?.email;
+    export let data: PageData;
+    $: ({ featuredProducts = [], error = null } = data || {});
 
     let mobileMenuOpen = false;
 </script>
@@ -19,7 +19,14 @@
 
     <main>
         <HeroSection />
-        <FeaturedProducts />
+        {#if error}
+            <div
+                class="bg-red-50 border-l-4 border-red-400 p-4 mb-8 max-w-7xl mx-auto"
+            >
+                <p class="text-red-700">{error}</p>
+            </div>
+        {/if}
+        <FeaturedProducts products={featuredProducts} />
         <TestimonialsSection />
 
         <section class="py-16 bg-primary text-primary-foreground">

@@ -7,10 +7,20 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient
 			getSession: () => Promise<Session | null>
+			user: User | null
 		}
 		interface PageData {
-			session?: Session | null
+			session: Session | null
 			user: User | null
+			featuredProducts?: Array<{
+        id: number;
+        name: string;
+        category: string;
+        price: number;
+        imageUrl: string;
+        rating: number;
+      }>;
+      error?: string;
 		}
 	}
 }
