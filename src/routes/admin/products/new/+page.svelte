@@ -1,23 +1,16 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
+    import { onMount } from "svelte";
     import { getSupabase } from "$lib/supabase/client";
+    import { toSlug } from "$lib/utils/product-utils";
     import * as Card from "$lib/components/ui/card/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
     import Textarea from "$lib/components/ui/textarea/textarea.svelte";
-    import { onMount } from "svelte";
     import type { Database } from "$lib/supabase/types";
-    
-    // Type for keyboard events
-    type KeyboardEvent = {
-        key: string;
-        preventDefault: () => void;
-    };
 
     type Category = Database["public"]["Tables"]["product_categories"]["Row"];
-    type Product = Database["public"]["Tables"]["products"]["Insert"];
 
     type FieldType =
         | "text"
@@ -57,58 +50,67 @@
     let categories = $state<Category[]>([]);
     let errorMessage = $state("");
     let selectedCategory = $state<number | null>(null);
-    
-    // Input field states
+
     let browserInput = $state("");
     let compatibleInput = $state("");
     let featureInput = $state("");
     let filesInput = $state("");
     let tagInput = $state("");
-    
-    // Helper functions for array fields
-    function addItem(fieldName: 'compatible_browser' | 'compatible_with' | 'features' | 'files_include' | 'tags') {
+
+    function addItem(
+        fieldName:
+            | "compatible_browser"
+            | "compatible_with"
+            | "features"
+            | "files_include"
+            | "tags",
+    ) {
         const inputMap = {
-            'compatible_browser': () => {
+            compatible_browser: () => {
                 if (browserInput.trim()) {
-                    product.compatible_browser = [...product.compatible_browser, browserInput.trim()];
-                    browserInput = '';
+                    product.compatible_browser = [
+                        ...product.compatible_browser,
+                        browserInput.trim(),
+                    ];
+                    browserInput = "";
                 }
             },
-            'compatible_with': () => {
+            compatible_with: () => {
                 if (compatibleInput.trim()) {
-                    product.compatible_with = [...product.compatible_with, compatibleInput.trim()];
-                    compatibleInput = '';
+                    product.compatible_with = [
+                        ...product.compatible_with,
+                        compatibleInput.trim(),
+                    ];
+                    compatibleInput = "";
                 }
             },
-            'features': () => {
+            features: () => {
                 if (featureInput.trim()) {
-                    product.features = [...product.features, featureInput.trim()];
-                    featureInput = '';
+                    product.features = [
+                        ...product.features,
+                        featureInput.trim(),
+                    ];
+                    featureInput = "";
                 }
             },
-            'files_include': () => {
+            files_include: () => {
                 if (filesInput.trim()) {
-                    product.files_include = [...product.files_include, filesInput.trim()];
-                    filesInput = '';
+                    product.files_include = [
+                        ...product.files_include,
+                        filesInput.trim(),
+                    ];
+                    filesInput = "";
                 }
             },
-            'tags': () => {
+            tags: () => {
                 if (tagInput.trim()) {
                     product.tags = [...product.tags, tagInput.trim()];
-                    tagInput = '';
+                    tagInput = "";
                 }
-            }
+            },
         };
-        
+
         inputMap[fieldName]();
-    }
-    
-    function removeItem(fieldName: string, index: number) {
-        if (Array.isArray(product[fieldName as keyof ProductState])) {
-            (product[fieldName as keyof ProductState] as string[]).splice(index, 1);
-            // Trigger reactivity
-            product[fieldName as keyof ProductState] = [...product[fieldName as keyof ProductState] as string[]];
-        }
     }
 
     $effect(() => {
@@ -122,6 +124,7 @@
 
     type ProductState = {
         name: string;
+        slug: string;
         category_id: number | null;
         compatible_browser: string[];
         compatible_with: string[];
@@ -136,6 +139,7 @@
         price: number;
         tags: string[];
         thumbnail: string;
+        is_active: boolean;
         user_id: string;
         [key: string]:
             | string
@@ -149,6 +153,7 @@
 
     let product = $state<ProductState>({
         name: "",
+        slug: "",
         category_id: null,
         compatible_browser: [],
         compatible_with: [],
@@ -163,27 +168,34 @@
         price: 0,
         tags: [],
         thumbnail: "",
+        is_active: true,
         user_id: "",
     });
 
-    function getArrayField<T>(field: T[] | null | undefined): T[] {
-        return field || [];
-    }
+    $effect(() => {
+        if (categoryFields) {
+            const multipleSelectFields = Object.values(categoryFields)
+                .flat()
+                .filter(
+                    (field): field is SelectField =>
+                        field?.type === "select" &&
+                        "multiple" in field &&
+                        (field as SelectField).multiple === true,
+                )
+                .map((field) => field.name) as (keyof ProductState)[];
 
-    function getNumberValue(fieldName: string): number {
-        if (fieldName === "price") {
-            return product.price ?? 0;
-        }
-        return 0;
-    }
+            const updates = {} as Partial<ProductState>;
+            for (const field of multipleSelectFields) {
+                if (!Array.isArray(product[field])) {
+                    updates[field] = [];
+                }
+            }
 
-    function handleNumberInput(event: Event, fieldName: string): void {
-        const target = event.target as HTMLInputElement;
-        const value = Number(target.value);
-        if (fieldName === "price") {
-            product.price = isNaN(value) ? 0 : value;
+            if (Object.keys(updates).length > 0) {
+                product = { ...product, ...updates };
+            }
         }
-    }
+    });
 
     const categoryFields: { default: Field[]; [key: number]: Field[] } = {
         default: [
@@ -266,7 +278,6 @@
             },
             { name: "high_res", label: "High Resolution", type: "checkbox" },
         ],
-        // WordPress Themes
         2: [
             {
                 name: "compatible_browser",
@@ -454,12 +465,6 @@
         }
     });
 
-    let tempCompatibleBrowser = $state("");
-    let tempCompatibleWith = $state("");
-    let tempFeature = $state("");
-    let tempFileInclude = $state("");
-    let tempTag = $state("");
-
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
         try {
@@ -476,11 +481,15 @@
                 throw new Error("User not authenticated");
             }
 
-            const toPgArray = (arr: string[] | null | undefined) =>
-                arr?.length ? `{${arr.join(",")}}` : null;
+            const toPgArray = (arr: any) => {
+                if (!arr) return null;
+                const arrayValue = Array.isArray(arr) ? arr : [arr];
+                return arrayValue.length ? `{${arrayValue.join(",")}}` : null;
+            };
 
             const payload = {
                 ...product,
+                slug: toSlug(product.name),
                 user_id: user.id,
                 category_id: product.category_id,
                 features: toPgArray(product.features),
@@ -565,29 +574,34 @@
                                 <Input
                                     id={field.name}
                                     type={field.type}
-                                    value={
-                                        String(
-                                            (product as any)[field.name] ?? (field.type === "number" ? "0" : "")
-                                        )
-                                    }
+                                    value={String(
+                                        (product as any)[field.name] ??
+                                            (field.type === "number"
+                                                ? "0"
+                                                : ""),
+                                    )}
                                     oninput={(event: Event) => {
-                                        const target = event.target as HTMLInputElement;
-                                        (product as any)[field.name] = field.type === "number" 
-                                            ? (target.value ? Number(target.value) : 0)
-                                            : target.value;
+                                        const target =
+                                            event.target as HTMLInputElement;
+                                        (product as any)[field.name] =
+                                            field.type === "number"
+                                                ? target.value
+                                                    ? Number(target.value)
+                                                    : 0
+                                                : target.value;
                                     }}
                                     placeholder={field.placeholder}
                                     required={field.required}
-                                    step={field.type === "number" ? "0.01" : undefined}
+                                    step={field.type === "number"
+                                        ? "0.01"
+                                        : undefined}
                                 />
                             {:else if field.type === "textarea"}
                                 <Textarea
                                     id={field.name}
-                                    value={
-                                        String(
-                                            (product as any)[field.name] ?? "",
-                                        )
-                                    }
+                                    value={String(
+                                        (product as any)[field.name] ?? "",
+                                    )}
                                     oninput={(event: Event) => {
                                         const target =
                                             event.target as HTMLTextAreaElement;
@@ -599,45 +613,69 @@
                                     class="min-h-[100px]"
                                 />
                             {:else if field.type === "select" && "options" in field}
-                                <select
-                                    id={field.name}
-                                    value={
-                                        String(
-                                            (product as any)[field.name] ?? "",
-                                        )
-                                    }
-                                    onchange={(event) => {
-                                        const target =
-                                            event.target as HTMLSelectElement;
-                                        (product as any)[field.name] =
-                                            target.value;
-                                    }}
-                                    class="w-full p-2 border rounded"
-                                    required={field.required}
-                                    multiple={field.multiple}
-                                >
-                                    {#each (field as SelectField).options as option}
-                                        {#if typeof option === "string"}
-                                            <option value={option}>
-                                                {option}
-                                            </option>
-                                        {:else}
-                                            <option value={option.value}>
-                                                {option.label}
-                                            </option>
+                                {#if field.multiple}
+                                    <select
+                                        id={field.name}
+                                        class="w-full p-2 border rounded"
+                                        required={field.required}
+                                        multiple
+                                        onchange={(e) => {
+                                            const target =
+                                                e.target as HTMLSelectElement;
+                                            const selected = Array.from(
+                                                target.selectedOptions,
+                                                (option: HTMLOptionElement) =>
+                                                    option.value,
+                                            );
+                                            (product as any)[field.name] =
+                                                selected;
+                                        }}
+                                    >
+                                        {#each (field as SelectField).options as option}
+                                            {#if typeof option === "string"}
+                                                <option value={option}>
+                                                    {option}
+                                                </option>
+                                            {:else}
+                                                <option value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            {/if}
+                                        {/each}
+                                    </select>
+                                {:else}
+                                    <select
+                                        id={field.name}
+                                        bind:value={product[field.name]}
+                                        class="w-full p-2 border rounded"
+                                        required={field.required}
+                                    >
+                                        {#if !field.required}
+                                            <option value=""
+                                                >-- Select --</option
+                                            >
                                         {/if}
-                                    {/each}
-                                </select>
+                                        {#each (field as SelectField).options as option}
+                                            {#if typeof option === "string"}
+                                                <option value={option}>
+                                                    {option}
+                                                </option>
+                                            {:else}
+                                                <option value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            {/if}
+                                        {/each}
+                                    </select>
+                                {/if}
                             {:else if field.type === "checkbox"}
                                 <div class="flex items-center space-x-2">
                                     <input
                                         type="checkbox"
                                         id={field.name}
-                                        checked={
-                                            Boolean(
-                                                (product as any)[field.name],
-                                            )
-                                        }
+                                        checked={Boolean(
+                                            (product as any)[field.name],
+                                        )}
                                         onchange={(event) => {
                                             const target =
                                                 event.target as HTMLInputElement;
@@ -654,16 +692,17 @@
                                     </label>
                                 </div>
                             {/if}
-                            
-                            {#if field.name === 'description'}
+
+                            {#if field.name === "description"}
                                 <div class="text-sm text-gray-500 text-right">
-                                    {String((product as any)[field.name] ?? "").length}/1000
+                                    {String((product as any)[field.name] ?? "")
+                                        .length}/1000
                                 </div>
                             {/if}
                         </div>
                     {/each}
-                    
-                    {#if currentFields.some(f => f.name === 'demo_url' && product.demo_url)}
+
+                    {#if currentFields.some((f) => f.name === "demo_url" && product.demo_url)}
                         <div class="flex items-center">
                             <a
                                 href={product.demo_url}
@@ -672,135 +711,28 @@
                                 class="text-sm text-blue-600 hover:underline flex items-center gap-1"
                             >
                                 <span>Open Demo in new tab</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                    />
                                 </svg>
                             </a>
                         </div>
                     {/if}
-                    
-                    {#if currentFields.some(f => ['compatible_browser', 'compatible_with', 'features', 'files_include', 'tags'].includes(f.name))}
-                        {#each ['compatible_browser', 'compatible_with', 'features', 'files_include', 'tags'] as fieldName}
-                            {#if currentFields.some(f => f.name === fieldName)}
-                                <div class="space-y-2">
-                                    <Label for={`${fieldName}_input`}>
-                                        {fieldName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                                        {currentFields.find(f => f.name === fieldName)?.required ? ' *' : ''}
-                                    </Label>
-                                    <div class="flex gap-2">
-                                        {#if fieldName === 'compatible_browser'}
-                                            <Input
-                                                id="compatible_browser_input"
-                                                bind:value={browserInput}
-                                                type="text"
-                                                placeholder="e.g., Chrome, Firefox"
-                                                class="flex-1"
-                                                onkeydown={(e) => {
-                                                    const event = e as unknown as KeyboardEvent;
-                                                    if (event.key === 'Enter') {
-                                                        event.preventDefault();
-                                                        addItem('compatible_browser');
-                                                    }
-                                                }}
-                                            />
-                                        {:else if fieldName === 'compatible_with'}
-                                            <Input
-                                                id="compatible_with_input"
-                                                bind:value={compatibleInput}
-                                                type="text"
-                                                placeholder="e.g., Bootstrap, React"
-                                                class="flex-1"
-                                                onkeydown={(e) => {
-                                                    const event = e as unknown as KeyboardEvent;
-                                                    if (event.key === 'Enter') {
-                                                        event.preventDefault();
-                                                        addItem('compatible_with');
-                                                    }
-                                                }}
-                                            />
-                                        {:else if fieldName === 'features'}
-                                            <Input
-                                                id="features_input"
-                                                bind:value={featureInput}
-                                                type="text"
-                                                placeholder="e.g., Responsive Design"
-                                                class="flex-1"
-                                                onkeydown={(e) => {
-                                                    const event = e as unknown as KeyboardEvent;
-                                                    if (event.key === 'Enter') {
-                                                        event.preventDefault();
-                                                        addItem('features');
-                                                    }
-                                                }}
-                                            />
-                                        {:else if fieldName === 'files_include'}
-                                            <Input
-                                                id="files_include_input"
-                                                bind:value={filesInput}
-                                                type="text"
-                                                placeholder="e.g., HTML, CSS"
-                                                class="flex-1"
-                                                onkeydown={(e) => {
-                                                    const event = e as unknown as KeyboardEvent;
-                                                    if (event.key === 'Enter') {
-                                                        event.preventDefault();
-                                                        addItem('files_include');
-                                                    }
-                                                }}
-                                            />
-                                        {:else if fieldName === 'tags'}
-                                            <Input
-                                                id="tags_input"
-                                                bind:value={tagInput}
-                                                type="text"
-                                                placeholder="e.g., electronics, wireless"
-                                                class="flex-1"
-                                                onkeydown={(e) => {
-                                                    const event = e as unknown as KeyboardEvent;
-                                                    if (event.key === 'Enter') {
-                                                        event.preventDefault();
-                                                        addItem('tags');
-                                                    }
-                                                }}
-                                            />
-                                        {/if}
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onclick={() => {
-                                                if (fieldName === 'compatible_browser') addItem('compatible_browser');
-                                                else if (fieldName === 'compatible_with') addItem('compatible_with');
-                                                else if (fieldName === 'features') addItem('features');
-                                                else if (fieldName === 'files_include') addItem('files_include');
-                                                else if (fieldName === 'tags') addItem('tags');
-                                            }}
-                                        >
-                                            Add
-                                        </Button>
-                                    </div>
-                                    {#if Array.isArray((product as any)[fieldName]) && (product as any)[fieldName].length > 0}
-                                        <div class="flex flex-wrap gap-2 mt-2">
-                                            {#each (product as any)[fieldName] as item, i}
-                                                <div class="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm">
-                                                    {item}
-                                                    <button
-                                                        type="button"
-                                                        class="text-gray-500 hover:text-red-500"
-                                                        onclick={() => removeItem(fieldName, i)}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            {/each}
-                                        </div>
-                                    {/if}
-                                </div>
-                            {/if}
-                        {/each}
-                    {/if}
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t">
+                <div
+                    class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t"
+                >
                     <Button
                         type="button"
                         variant="outline"

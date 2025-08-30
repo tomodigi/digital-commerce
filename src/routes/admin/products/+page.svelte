@@ -118,9 +118,6 @@
   {:else if products.length === 0}
     <div class="text-center py-12">
       <p class="text-gray-500 mb-4">No products found</p>
-      <Button onclick={() => goto("/admin/products/new")}>
-        Create your first product
-      </Button>
     </div>
   {:else}
     <div class="bg-white rounded-lg border overflow-hidden">
