@@ -1,3 +1,4 @@
+import type { Database } from "$lib/supabase/types";
 export interface Product {
     name: string;
     category_id: number | null;
@@ -34,4 +35,64 @@ export const initialProduct: Product = {
     tags: [],
     thumbnail: "",
     user_id: ""
+};
+
+export type Category = Database["public"]["Tables"]["product_categories"]["Row"];
+
+export type FieldType =
+    | "text"
+    | "number"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "url"
+    | "file";
+
+export interface BaseField {
+    name: string;
+    label: string;
+    type: FieldType;
+    required?: boolean;
+    placeholder?: string;
+    accept?: string;
+}
+
+export interface SelectOption {
+    value: string;
+    label: string;
+}
+
+export interface SelectField extends BaseField {
+    type: "select";
+    options: string[] | SelectOption[];
+    multiple?: boolean;
+}
+
+export interface CheckboxField extends BaseField {
+    type: "checkbox";
+    default?: boolean;
+}
+
+export type Field = BaseField | SelectField | CheckboxField;
+
+export type ProductState = {
+    name: string;
+    slug: string;
+    category_id: number | null;
+    compatible_browser: string[];
+    compatible_with: string[];
+    demo_url: string;
+    description: string;
+    features: string[];
+    file: string;
+    files_include: string[];
+    high_res: boolean;
+    layout: string | null;
+    preview: string;
+    price: number;
+    tags: string[];
+    thumbnail: string;
+    is_active: boolean;
+    user_id: string;
+    [key: string]: string | number | boolean | string[] | null | undefined;
 };

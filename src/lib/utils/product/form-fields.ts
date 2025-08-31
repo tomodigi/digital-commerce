@@ -1,0 +1,213 @@
+import type { Field } from "$lib/types/product";
+
+export const categoryFields: { default: Field[];[key: number]: Field[] } = {
+    default: [
+        {
+            name: "name",
+            label: "Product Name",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "description",
+            label: "Description",
+            type: "textarea",
+            required: true,
+        },
+        { name: "price", label: "Price", type: "number", required: true },
+        {
+            name: "thumbnail",
+            label: "Thumbnail Image",
+            type: "file",
+            accept: "image/*",
+            required: true,
+        },
+        {
+            name: "preview",
+            label: "Preview Images (ZIP)",
+            type: "file",
+            accept: ".zip",
+            required: false,
+        },
+        {
+            name: "demo_url",
+            label: "Demo URL",
+            type: "url",
+            required: true,
+        },
+    ],
+    1: [
+        {
+            name: "layout",
+            label: "Layout",
+            type: "select",
+            options: [
+                { value: "Responsive", label: "Responsive" },
+                { value: "Fixed Width", label: "Fixed Width" },
+                { value: "Fluid", label: "Fluid" },
+            ],
+            required: true,
+        },
+        {
+            name: "compatible_browser",
+            label: "Compatible Browsers",
+            type: "select",
+            options: [
+                { value: "Chrome", label: "Chrome" },
+                { value: "Firefox", label: "Firefox" },
+                { value: "Safari", label: "Safari" },
+                { value: "Edge", label: "Edge" },
+                { value: "IE11", label: "IE11" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "compatible_with",
+            label: "Compatible With",
+            type: "select",
+            options: [
+                { value: "Bootstrap 5", label: "Bootstrap 5" },
+                { value: "Tailwind CSS", label: "Tailwind CSS" },
+                { value: "React", label: "React" },
+                { value: "Vue", label: "Vue" },
+                { value: "Angular", label: "Angular" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "files_include",
+            label: "Files Included",
+            type: "select",
+            options: [
+                { value: "HTML", label: "HTML" },
+                { value: "CSS", label: "CSS" },
+                { value: "JS", label: "JS" },
+                { value: "PSD", label: "PSD" },
+                { value: "Documentation", label: "Documentation" },
+            ],
+            multiple: true,
+        },
+        { name: "high_res", label: "High Resolution", type: "checkbox" },
+    ],
+    2: [
+        {
+            name: "compatible_browser",
+            label: "Compatible Browsers",
+            type: "select",
+            options: [
+                { value: "Chrome", label: "Chrome" },
+                { value: "Firefox", label: "Firefox" },
+                { value: "Safari", label: "Safari" },
+                { value: "Edge", label: "Edge" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "compatible_with",
+            label: "Compatible With",
+            type: "select",
+            options: [
+                { value: "WooCommerce", label: "WooCommerce" },
+                { value: "Elementor", label: "Elementor" },
+                { value: "Gutenberg", label: "Gutenberg" },
+                { value: "WPML", label: "WPML" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "files_include",
+            label: "Files Included",
+            type: "select",
+            options: [
+                { value: "PHP", label: "PHP" },
+                { value: "CSS", label: "CSS" },
+                { value: "JS", label: "JS" },
+                { value: "PSD", label: "PSD" },
+                { value: "Documentation", label: "Documentation" },
+            ],
+            multiple: true,
+        },
+        { name: "high_res", label: "High Resolution", type: "checkbox" },
+    ],
+    3: [
+        {
+            name: "compatible_with",
+            label: "Compatible With",
+            type: "select",
+            options: [
+                { value: "Figma", label: "Figma" },
+                { value: "Adobe XD", label: "Adobe XD" },
+                { value: "Sketch", label: "Sketch" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "files_include",
+            label: "Files Included",
+            type: "select",
+            options: [
+                { value: "Figma", label: "Figma" },
+                { value: "XD", label: "XD" },
+                { value: "Sketch", label: "Sketch" },
+                { value: "SVG", label: "SVG" },
+                { value: "PDF", label: "PDF" },
+            ],
+            multiple: true,
+        },
+    ],
+    4: [
+        {
+            name: "compatible_browser",
+            label: "Compatible Browsers",
+            type: "select",
+            options: [
+                { value: "Chrome", label: "Chrome" },
+                { value: "Firefox", label: "Firefox" },
+                { value: "Safari", label: "Safari" },
+                { value: "Edge", label: "Edge" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "compatible_with",
+            label: "Compatible With",
+            type: "select",
+            options: [
+                { value: "WordPress", label: "WordPress" },
+                { value: "Shopify", label: "Shopify" },
+                { value: "Magento", label: "Magento" },
+                { value: "React", label: "React" },
+                { value: "Vue", label: "Vue" },
+            ],
+            multiple: true,
+        },
+        {
+            name: "files_include",
+            label: "Files Included",
+            type: "select",
+            options: [
+                { value: "PHP", label: "PHP" },
+                { value: "JS", label: "JS" },
+                { value: "CSS", label: "CSS" },
+                { value: "Documentation", label: "Documentation" },
+            ],
+            multiple: true,
+        },
+    ],
+    5: [
+        {
+            name: "files_include",
+            label: "Files Included",
+            type: "select",
+            options: [
+                { value: "AI", label: "AI" },
+                { value: "EPS", label: "EPS" },
+                { value: "PNG", label: "PNG" },
+                { value: "SVG", label: "SVG" },
+                { value: "PDF", label: "PDF" },
+            ],
+            multiple: true,
+        },
+        { name: "high_res", label: "High Resolution", type: "checkbox" },
+    ],
+};

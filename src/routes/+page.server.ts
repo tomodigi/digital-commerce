@@ -1,5 +1,6 @@
 import { getSupabase } from '$lib/supabase/server';
 import type { PageServerLoad } from './$types';
+import { parsePreviewUrls } from '$lib/utils/product/product-utils';
 
 interface Product {
   id: number;
@@ -7,6 +8,7 @@ interface Product {
   category_id?: number;
   price: number | string;
   thumbnail?: string;
+  preview?: string[];
   rating?: number | string;
   created_at: string;
 }
@@ -38,14 +40,19 @@ export const load: PageServerLoad = async (event) => {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const featuredProducts = typedProducts.map((product) => ({
-      id: product.id,
-      name: product.name,
-      category: typedCategories.find((c) => c.id === product.category_id)?.name || 'Uncategorized',
-      price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
-      imageUrl: product.thumbnail || 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image',
-      rating: Math.min(5, Math.max(0, typeof product.rating === 'number' ? product.rating : Number(product.rating) || 0))
-    }));
+    const featuredProducts = typedProducts.map((product) => {
+
+      const previewUrls = parsePreviewUrls(product.preview);
+      return {
+        id: product.id,
+        name: product.name,
+        category: typedCategories.find((c) => c.id === product.category_id)?.name || 'Uncategorized',
+        price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+        imageUrl: previewUrls.length > 0 ? previewUrls[0] : 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image',
+        preview: previewUrls,
+        rating: Math.min(5, Math.max(0, typeof product.rating === 'number' ? product.rating : Number(product.rating) || 0))
+      };
+    });
 
     return {
       featuredProducts,
