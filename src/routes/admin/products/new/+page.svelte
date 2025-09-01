@@ -26,6 +26,13 @@
     let selectedThumbnail = $state<File | null>(null);
     let thumbnailPreview = $state<string | null>(null);
     let previewZipFile = $state<File | null>(null);
+    let productZipFile = $state<File | null>(null);
+
+    let feature1 = $state("");
+    let feature2 = $state("");
+    let feature3 = $state("");
+
+    let tag1 = $state("");
 
     let product = $state<ProductState>({
         name: "",
@@ -111,12 +118,42 @@
         }
     };
 
+    const handleProductFileChange = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (file && file.name.endsWith(".zip")) {
+            productZipFile = file;
+            errorMessage = "";
+        } else {
+            productZipFile = null;
+            target.value = "";
+            errorMessage = "Please upload a valid ZIP file.";
+        }
+    };
+
     const handleSubmit = async (event: Event) => {
         event.preventDefault();
         loading = true;
         errorMessage = "";
+
+        const features = [feature1, feature2, feature3].filter(
+            (f) => f.trim() !== "",
+        );
+        product.features = features;
+
+        const tags = tag1
+            .split(/[,\s]+/)
+            .map((t) => t.trim())
+            .filter((t) => t !== "");
+        product.tags = tags;
+
         try {
-            await addProduct(product, selectedThumbnail, previewZipFile);
+            await addProduct(
+                product,
+                selectedThumbnail,
+                previewZipFile,
+                productZipFile,
+            );
             goto("/admin/products");
         } catch (error: any) {
             errorMessage =
@@ -157,7 +194,9 @@
                 <div class="grid grid-cols-1 gap-6">
                     {#if isLoading}
                         <div class="flex justify-center py-8">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            <div
+                                class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
+                            ></div>
                         </div>
                     {:else if selectedCategory}
                         <div class="space-y-2">
@@ -270,7 +309,9 @@
                                         required={field.required}
                                         onchange={field.name === "thumbnail"
                                             ? handleThumbnailChange
-                                            : handlePreviewZipChange}
+                                            : field.name === "file"
+                                              ? handleProductFileChange
+                                              : handlePreviewZipChange}
                                     />
                                     {#if field.name === "thumbnail" && thumbnailPreview}
                                         <img
@@ -295,13 +336,61 @@
                                             >{field.label}</Label
                                         >
                                     </div>
+                                {:else if field.type === "features"}
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-1 gap-4">
+                                            <div class="space-y-2">
+                                                <Input
+                                                    id="feature1"
+                                                    type="text"
+                                                    placeholder="Enter feature 1"
+                                                    bind:value={feature1}
+                                                />
+                                            </div>
+                                            <div class="space-y-2">
+                                                <Input
+                                                    id="feature2"
+                                                    type="text"
+                                                    placeholder="Enter feature 2"
+                                                    bind:value={feature2}
+                                                />
+                                            </div>
+                                            <div class="space-y-2">
+                                                <Input
+                                                    id="feature3"
+                                                    type="text"
+                                                    placeholder="Enter feature 3"
+                                                    bind:value={feature3}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            Features will be saved when you
+                                            submit the product
+                                        </div>
+                                    </div>
+                                {:else if field.type === "tags"}
+                                    <div class="space-y-4">
+                                        <div class="space-y-2">
+                                            <Input
+                                                id="tags"
+                                                type="text"
+                                                placeholder="Enter tags separated by spaces or commas (e.g., web design, responsive modern)"
+                                                bind:value={tag1}
+                                            />
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            Enter multiple tags separated by
+                                            spaces or commas. Tags will be saved
+                                            when you submit the product.
+                                        </div>
+                                    </div>
                                 {/if}
                             </div>
                         {/each}
                     {/if}
                 </div>
 
-                <!-- Form Actions -->
                 <div
                     class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t"
                 >

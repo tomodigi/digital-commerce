@@ -23,13 +23,13 @@ export async function fetchCategories() {
 /**
  * Uploads a thumbnail image to Supabase Storage.
  * @param file - The thumbnail image file.
- * @param productId - The ID of the product to associate the thumbnail with.
+ * @param productSlug - The slug of the product to associate the thumbnail with.
  * @returns The public URL of the uploaded thumbnail.
  */
-async function uploadThumbnail(file: File, productId: string): Promise<string> {
+async function uploadThumbnail(file: File, productSlug: string): Promise<string> {
     const supabase = await getSupabase();
     const fileExt = file.name.split(".").pop();
-    const fileName = `${productId}-${Date.now()}.${fileExt}`;
+    const fileName = `${productSlug}-${Date.now()}.${fileExt}`;
     const filePath = `thumbnails/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -52,25 +52,29 @@ async function uploadThumbnail(file: File, productId: string): Promise<string> {
 /**
  * Extracts images from a ZIP file and uploads them to Supabase Storage.
  * @param zipFile - The ZIP file containing preview images.
- * @param productName - The name of the product.
+ * @param productSlug - The slug of the product.
  * @returns An array of public URLs for the uploaded images.
  */
-async function uploadPreviewImages(zipFile: File, productName: string): Promise<string[]> {
+async function uploadPreviewImages(zipFile: File, productSlug: string): Promise<string[]> {
     const supabase = await getSupabase();
-    const extractedImages = await extractImagesFromZip(zipFile, productName);
+    const extractedImages = await extractImagesFromZip(zipFile);
 
     if (extractedImages.length === 0) {
         throw new Error("No valid images found in the ZIP file.");
     }
 
-    const uploadPromises = extractedImages.map(async (image, index) => {
-        const extension = image.name.split('.').pop() || 'jpg';
-        const baseName = productName.toLowerCase().replace(/\s+/g, '');
-        const fileName = index === 0
-            ? `${baseName}.${extension}`
-            : `${baseName}-${index + 1}.${extension}`;
+    const sortedImages = [...extractedImages].sort((a, b) => {
+        const numA = parseInt(a.name.split('_')[0]) || 0;
+        const numB = parseInt(b.name.split('_')[0]) || 0;
+        return numA - numB;
+    });
 
-        const filePath = `previews/${fileName}`;
+    const uploadPromises = sortedImages.map(async (image) => {
+        const extension = image.name.split('.').pop() || 'jpg';
+        const originalName = image.name.split('.')[0];
+        const fileName = `${originalName}.${extension}`;
+
+        const filePath = `previews/${productSlug}/${fileName}`;
         const imageFile = new File([image.blob], fileName, { type: image.blob.type });
 
         const { error } = await supabase.storage.from("products").upload(filePath, imageFile, {
@@ -84,20 +88,48 @@ async function uploadPreviewImages(zipFile: File, productName: string): Promise<
         }
 
         const { data } = supabase.storage.from("products").getPublicUrl(filePath);
-        return data.publicUrl;
+        return {
+            url: data.publicUrl,
+            originalName: fileName
+        };
     });
 
-    const urls = (await Promise.all(uploadPromises)).filter((url): url is string => url !== null);
+    const results = (await Promise.all(uploadPromises)).filter((result): result is { url: string, originalName: string } => result !== null);
 
-    if (urls.length === 0) {
+    if (results.length === 0) {
         throw new Error("Failed to upload any preview images.");
     }
 
-    return urls.sort((a, b) => {
-        const numA = parseInt(a.match(/-?(\d+)\./)?.[1] || '0');
-        const numB = parseInt(b.match(/-?(\d+)\./)?.[1] || '0');
-        return numA - numB;
-    });
+    return results.map(result => result.url);
+}
+
+/**
+ * Uploads a product file to Supabase Storage.
+ * @param file - The product file (ZIP).
+ * @param productSlug - The slug of the product to associate the file with.
+ * @returns The public URL of the uploaded file.
+ */
+async function uploadProductFile(file: File, productSlug: string): Promise<string> {
+    const supabase = await getSupabase();
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${productSlug}-product.${fileExt}`;
+    const filePath = `files/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: "application/zip",
+        });
+
+    if (uploadError) {
+        console.error("Product file upload error:", uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    const { data } = supabase.storage.from("products").getPublicUrl(filePath);
+    return data.publicUrl;
 }
 
 
@@ -116,11 +148,13 @@ function toPgArray(arr: unknown): string | null {
  * @param product - The product state object.
  * @param thumbnailFile - The optional thumbnail file.
  * @param previewZip - The optional preview ZIP file.
+ * @param productFile - The optional product file (ZIP).
  */
 export async function addProduct(
     product: ProductState,
     thumbnailFile: File | null,
-    previewZip: File | null
+    previewZip: File | null,
+    productFile: File | null
 ) {
     const supabase = await getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
@@ -154,12 +188,16 @@ export async function addProduct(
     const updates: Partial<ProductState> = {};
 
     if (thumbnailFile) {
-        updates.thumbnail = await uploadThumbnail(thumbnailFile, productData.id);
+        updates.thumbnail = await uploadThumbnail(thumbnailFile, productData.slug);
     }
 
     if (previewZip) {
-        const previewUrls = await uploadPreviewImages(previewZip, product.name);
+        const previewUrls = await uploadPreviewImages(previewZip, productData.slug);
         updates.preview = JSON.stringify(previewUrls);
+    }
+
+    if (productFile) {
+        updates.file = await uploadProductFile(productFile, productData.slug);
     }
 
     if (Object.keys(updates).length > 0) {

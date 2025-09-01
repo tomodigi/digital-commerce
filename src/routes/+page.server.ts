@@ -24,33 +24,46 @@ export const load: PageServerLoad = async (event) => {
   try {
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('*')
+      .select(`
+        id,
+        name,
+        price,
+        preview,
+        stars,
+        category_id
+      `)
       .order('created_at', { ascending: false })
       .limit(4);
 
-    const { data: categories, error: categoriesError } = await supabase
-      .from('product_categories')
-      .select('*');
-
     if (productsError) throw productsError;
+
+    const categoryIds = [...new Set(products?.map(p => p.category_id).filter(Boolean))];
+    const { data: categories, error: categoriesError } = categoryIds.length > 0
+      ? await supabase
+        .from('product_categories')
+        .select('id, name')
+        .in('id', categoryIds)
+      : { data: [], error: null };
+
     if (categoriesError) throw categoriesError;
 
-    const typedProducts = (products || []) as Product[];
     const typedCategories = (categories || []) as Category[];
-
     const { data: { user } } = await supabase.auth.getUser();
 
-    const featuredProducts = typedProducts.map((product) => {
+    const featuredProducts = (products || []).map((product) => {
+      const previewUrls = parsePreviewUrls(product.preview || []);
+      const category = product.category_id
+        ? typedCategories.find((c) => c.id === product.category_id)?.name
+        : 'Uncategorized';
 
-      const previewUrls = parsePreviewUrls(product.preview);
       return {
         id: product.id,
         name: product.name,
-        category: typedCategories.find((c) => c.id === product.category_id)?.name || 'Uncategorized',
         price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
-        imageUrl: previewUrls.length > 0 ? previewUrls[0] : 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image',
-        preview: previewUrls,
-        rating: Math.min(5, Math.max(0, typeof product.rating === 'number' ? product.rating : Number(product.rating) || 0))
+        category,
+        imageUrl: previewUrls[0] || 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image',
+        stars: Number(product.stars) || 0,
+        preview: previewUrls
       };
     });
 

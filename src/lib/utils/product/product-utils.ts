@@ -17,7 +17,7 @@ export interface ExtractedImage {
  */
 export function parsePreviewUrls(preview: unknown): string[] {
     if (!preview) return [];
-    
+
     try {
         if (typeof preview === 'string') {
             const parsed = JSON.parse(preview);
@@ -30,10 +30,7 @@ export function parsePreviewUrls(preview: unknown): string[] {
     }
 }
 
-export async function extractImagesFromZip(
-    file: File,
-    productName: string
-): Promise<ExtractedImage[]> {
+export async function extractImagesFromZip(file: File): Promise<ExtractedImage[]> {
     try {
         const zip = new JSZip();
         const content = await file.arrayBuffer();
@@ -43,32 +40,33 @@ export async function extractImagesFromZip(
             .filter(([fileName]) => {
                 const ext = fileName.split('.').pop()?.toLowerCase();
                 return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+            })
+            .sort(([fileNameA], [fileNameB]) => {
+                const numA = parseInt(fileNameA.split('_')[0]) || 0;
+                const numB = parseInt(fileNameB.split('_')[0]) || 0;
+                return numA - numB;
             });
 
         if (imageFiles.length === 0) {
             throw new Error('No image files found in the ZIP archive');
         }
 
-        const productSlug = toSlug(productName);
         const extractedImages: ExtractedImage[] = [];
-        let index = 1;
 
         for (const [fileName, fileData] of imageFiles) {
-            const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
-            const newFileName = index === 1
-                ? `${productSlug}.${fileExtension}`
-                : `${productSlug}-${index}.${fileExtension}`;
-
             const blob = await fileData.async('blob');
             const url = URL.createObjectURL(blob);
+
+            const fileExt = fileName.split('.').pop() || '';
+            const baseName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+
+            const newFileName = `${baseName}.${fileExt}`;
 
             extractedImages.push({
                 name: newFileName,
                 blob,
                 url
             });
-
-            index++;
         }
 
         return extractedImages;

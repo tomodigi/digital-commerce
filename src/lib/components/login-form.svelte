@@ -6,7 +6,6 @@
 	import { cn } from "$lib/utils.js";
 	import type { HTMLAttributes } from "svelte/elements";
 	import { getSupabase } from "$lib/supabase/client";
-	import { goto } from "$app/navigation";
 
 	let { class: className, ...restProps }: HTMLAttributes<HTMLDivElement> =
 		$props();
@@ -32,7 +31,7 @@
 
 			if (error) throw error;
 
-			goto("/");
+			window.location.href = "/";
 		} catch (error: any) {
 			errorMessage =
 				error.error_description || error.message || "Login failed";

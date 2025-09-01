@@ -46,7 +46,9 @@ export type FieldType =
     | "select"
     | "checkbox"
     | "url"
-    | "file";
+    | "file"
+    | "features"
+    | "tags";
 
 export interface BaseField {
     name: string;

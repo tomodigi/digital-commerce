@@ -20,9 +20,9 @@ const registerSchema = z
     });
 
 export const load: PageServerLoad = async ({ locals }) => {
-    const { data: { session } } = await locals.supabase.auth.getSession();
+    const { data: { user } } = await locals.supabase.auth.getUser();
 
-    if (session) {
+    if (user) {
         throw redirect(303, '/');
     }
 

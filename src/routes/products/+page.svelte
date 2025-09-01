@@ -1,7 +1,7 @@
 <script lang="ts">
     import Header from "$lib/components/header.svelte";
     import ProductCard from "$lib/components/product-card.svelte";
-    import type { PageData } from './$types';
+    import type { PageData } from "./$types";
 
     export let data: PageData;
 
@@ -13,13 +13,17 @@
         .filter(
             (product) =>
                 searchQuery === "" ||
-                product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                product.description.toLowerCase().includes(searchQuery.toLowerCase())
+                product.name
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()) ||
+                product.description
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()),
         )
         .sort((a, b) => {
             if (sortBy === "price-asc") return a.price - b.price;
             if (sortBy === "price-desc") return b.price - a.price;
-            if (sortBy === "rating") return b.rating - a.rating;
+            if (sortBy === "stars") return b.stars - a.stars;
             return 0;
         });
 </script>
@@ -55,7 +59,7 @@
                     <option value="featured">Featured</option>
                     <option value="price-asc">Price: Low to High</option>
                     <option value="price-desc">Price: High to Low</option>
-                    <option value="rating">Top Rated</option>
+                    <option value="stars">Top Rated</option>
                 </select>
             </div>
         </div>

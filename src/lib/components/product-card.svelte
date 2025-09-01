@@ -6,12 +6,14 @@
     export let product: {
         id: number;
         name: string;
-        category: string;
+        category?: string;
         price: number;
         imageUrl: string;
-        rating: number;
+        stars: number;
         description: string;
     };
+
+    $: displayCategory = product.category || "Uncategorized";
 
     function addToCart(event: MouseEvent) {
         event.preventDefault();
@@ -28,14 +30,17 @@
         />
     </div>
     <Card.Header class="p-6">
-        <div class="flex items-center gap-1 mb-2">
+        <span class="text-sm text-muted-foreground mb-2 block"
+            >{displayCategory}</span
+        >
+        <div class="flex items-center gap-1">
             {#each Array(5) as _, i}
                 <Star
-                    class={`h-4 w-4 ${i < product.rating ? "text-amber-400 fill-current" : "text-muted-foreground"}`}
+                    class={`h-4 w-4 ${i < product.stars ? "text-amber-400 fill-current" : "text-muted-foreground"}`}
                 />
             {/each}
             <span class="text-sm text-muted-foreground ml-1">
-                ({product.rating})
+                ({product.stars})
             </span>
         </div>
         <Card.Title class="text-xl font-semibold">

@@ -30,10 +30,29 @@ export const categoryFields: { default: Field[];[key: number]: Field[] } = {
             required: false,
         },
         {
+            name: "file",
+            label: "Product File (ZIP)",
+            type: "file",
+            accept: ".zip",
+            required: true,
+        },
+        {
             name: "demo_url",
             label: "Demo URL",
             type: "url",
             required: true,
+        },
+        {
+            name: "features",
+            label: "Key Features",
+            type: "features",
+            required: false,
+        },
+        {
+            name: "tags",
+            label: "Tags",
+            type: "tags",
+            required: false,
         },
     ],
     1: [

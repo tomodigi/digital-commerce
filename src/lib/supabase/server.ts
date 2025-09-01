@@ -51,8 +51,14 @@ export function getSupabase(event: { cookies: Cookies }) {
 }
 
 export async function getSession(supabase: ReturnType<typeof getSupabase>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  return session
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  
+  // For backward compatibility, return a session-like object
+  return {
+    user,
+    access_token: (await supabase.auth.getSession()).data.session?.access_token
+  }
 }
 
 export async function getUser(supabase: ReturnType<typeof getSupabase>) {
