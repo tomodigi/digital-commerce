@@ -7,6 +7,15 @@
   import { Badge } from "$lib/components/ui/badge/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import { formatCurrency } from "$lib/utils.js";
+  import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+  } from "$lib/components/ui/alert-dialog";
   import type { Database } from "$lib/supabase/types";
 
   type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -16,6 +25,7 @@
   let selectedCategory = $state<string>("");
   let loading = $state(true);
   let error = $state<string | null>(null);
+  let isDeleting = $state(false);
 
   onMount(async () => {
     try {
@@ -48,11 +58,89 @@
     goto(`/admin/products/edit/${productId}`);
   };
 
+  let showDeleteDialog = $state(false);
+  let productToDelete = $state<number | null>(null);
+
   const handleDelete = async (productId: number) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    productToDelete = productId;
+    showDeleteDialog = true;
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete === null) return;
+
+    const productId = productToDelete;
+    isDeleting = true;
+    error = null;
 
     try {
       const supabase = await getSupabase();
+
+      const { data: product, error: fetchError } = await supabase
+        .from("products")
+        .select("slug, thumbnail, preview, file")
+        .eq("id", productId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!product) throw new Error("Product not found");
+
+      const filesToDelete: string[] = [];
+
+      const extractPath = (url: string, basePath: string): string | null => {
+        try {
+          const urlObj = new URL(url);
+          const pathParts = urlObj.pathname.split("/").filter(Boolean);
+          const baseIndex = pathParts.findIndex(part => part === basePath);
+          if (baseIndex === -1) return null;
+          return `${pathParts[baseIndex]}/${pathParts.slice(baseIndex + 1).join("/")}`;
+        } catch {
+          return null;
+        }
+      };
+
+      if (product.thumbnail) {
+        const thumbnailPath = extractPath(product.thumbnail, "thumbnails");
+        if (thumbnailPath) {
+          filesToDelete.push(thumbnailPath);
+        }
+      }
+
+      if (product.preview) {
+        try {
+          const previewUrls =
+            typeof product.preview === "string"
+              ? JSON.parse(product.preview)
+              : product.preview;
+
+          if (Array.isArray(previewUrls) && previewUrls.length > 0) {
+            for (const url of previewUrls) {
+              const previewPath = extractPath(url, "previews");
+              if (previewPath) {
+                if (!filesToDelete.includes(previewPath)) {
+                  filesToDelete.push(previewPath);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error processing preview URLs:", e);
+        }
+      }
+
+      if (product.file) {
+        const filePath = extractPath(product.file, "files");
+        if (filePath) {
+          filesToDelete.push(filePath);
+        }
+      }
+
+      if (filesToDelete.length > 0) {
+        await supabase.storage
+          .from("products")
+          .remove(filesToDelete);
+      }
+
       const { error: deleteError } = await supabase
         .from("products")
         .delete()
@@ -61,12 +149,48 @@
       if (deleteError) throw deleteError;
 
       products = products.filter((p) => p.id !== Number(productId));
+      showDeleteDialog = false;
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to delete product";
       console.error("Error deleting product:", e);
+    } finally {
+      productToDelete = null;
+      isDeleting = false;
     }
   };
 </script>
+
+<AlertDialog
+  open={showDeleteDialog}
+  onOpenChange={(open) => (showDeleteDialog = open)}
+>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+      <AlertDialogDescription>
+        This action cannot be undone. This will permanently delete the product
+        and all associated files.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <button
+        onclick={confirmDelete}
+        type="button"
+        disabled={isDeleting}
+        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2 disabled:opacity-70 disabled:cursor-not-allowed"
+      >
+        {#if isDeleting}
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        {/if}
+        {isDeleting ? 'Deleting...' : 'Delete'}
+      </button>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
 
 <div class="container mx-auto py-8 px-4">
   <div class="flex flex-col space-y-4 mb-8">
