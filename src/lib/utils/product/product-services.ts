@@ -3,6 +3,110 @@ import { toSlug, extractImagesFromZip } from "$lib/utils/product/product-utils";
 import type { ProductState } from "$lib/types/product";
 
 /**
+ * Fetches a single product by its ID from the database.
+ * @param productId - The ID of the product to fetch.
+ * @returns A promise that resolves to the product data or null if not found.
+ */
+export async function fetchProduct(productId: string) {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .single();
+
+    if (error) {
+        console.error("Error fetching product:", error);
+        throw new Error("Failed to load product.");
+    }
+
+    return data;
+}
+
+/**
+ * Updates an existing product in the database and handles file uploads.
+ * @param productId - The ID of the product to update.
+ * @param updates - An object containing the fields to update.
+ * @param thumbnailFile - Optional new thumbnail file to upload.
+ * @param previewZip - Optional new preview zip file to process and upload.
+ * @param productFile - Optional new product file to upload.
+ * @returns A promise that resolves to the updated product data.
+ */
+export async function updateProduct(
+    productId: string,
+    updates: Partial<ProductState>,
+    thumbnailFile?: File | null,
+    previewZip?: File | null,
+    productFile?: File | null
+) {
+    const supabase = await getSupabase();
+
+    const { data: currentProduct } = await supabase
+        .from('products')
+        .select('thumbnail, preview, file')
+        .eq('id', productId)
+        .single();
+
+    if (thumbnailFile) {
+        updates.thumbnail = await uploadThumbnail(thumbnailFile, updates.slug || '');
+    }
+
+    if (previewZip) {
+        updates.preview = JSON.stringify(await uploadPreviewImages(previewZip, updates.slug || ''));
+    }
+
+    if (productFile) {
+        updates.file = await uploadProductFile(productFile, updates.slug || '');
+    }
+
+    const { data, error } = await supabase
+        .from("products")
+        .update(updates)
+        .eq("id", productId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating product:", error);
+        throw new Error("Failed to update product.");
+    }
+
+    try {
+        if (thumbnailFile && currentProduct?.thumbnail) {
+            const thumbnailPath = currentProduct.thumbnail.split('thumbnails/')[1];
+            if (thumbnailPath) {
+                await supabase.storage.from('products').remove([`thumbnails/${thumbnailPath}`]);
+            }
+        }
+
+        if (previewZip && currentProduct?.preview) {
+            const previewUrls = JSON.parse(currentProduct.preview);
+            if (Array.isArray(previewUrls)) {
+                const previewPaths = previewUrls
+                    .map(url => url.split('previews/')[1])
+                    .filter(Boolean);
+
+                if (previewPaths.length > 0) {
+                    const fullPaths = previewPaths.map(path => `previews/${path}`);
+                    await supabase.storage.from('products').remove(fullPaths);
+                }
+            }
+        }
+
+        if (productFile && currentProduct?.file) {
+            const filePath = currentProduct.file.split('products/')[1];
+            if (filePath) {
+                await supabase.storage.from('products').remove([filePath]);
+            }
+        }
+    } catch (cleanupError) {
+        console.error('Error cleaning up old files:', cleanupError);
+    }
+
+    return data;
+}
+
+/**
  * Fetches all product categories from the database.
  * @returns A promise that resolves to an array of categories.
  */
@@ -72,7 +176,7 @@ async function uploadPreviewImages(zipFile: File, productSlug: string): Promise<
     const uploadPromises = sortedImages.map(async (image) => {
         const extension = image.name.split('.').pop() || 'jpg';
         const originalName = image.name.split('.')[0];
-        const fileName = `${originalName}.${extension}`;
+        const fileName = `${originalName}-${Date.now()}.${extension}`;
 
         const filePath = `previews/${productSlug}/${fileName}`;
         const imageFile = new File([image.blob], fileName, { type: image.blob.type });
@@ -112,7 +216,7 @@ async function uploadPreviewImages(zipFile: File, productSlug: string): Promise<
 async function uploadProductFile(file: File, productSlug: string): Promise<string> {
     const supabase = await getSupabase();
     const fileExt = file.name.split(".").pop();
-    const fileName = `${productSlug}-product.${fileExt}`;
+    const fileName = `${productSlug}-${Date.now()}.${fileExt}`;
     const filePath = `files/${fileName}`;
 
     const { error: uploadError } = await supabase.storage

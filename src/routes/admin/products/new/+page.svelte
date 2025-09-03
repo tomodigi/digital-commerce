@@ -364,10 +364,6 @@
                                                 />
                                             </div>
                                         </div>
-                                        <div class="text-sm text-gray-500">
-                                            Features will be saved when you
-                                            submit the product
-                                        </div>
                                     </div>
                                 {:else if field.type === "tags"}
                                     <div class="space-y-4">
@@ -378,11 +374,6 @@
                                                 placeholder="Enter tags separated by spaces or commas (e.g., web design, responsive modern)"
                                                 bind:value={tag1}
                                             />
-                                        </div>
-                                        <div class="text-sm text-gray-500">
-                                            Enter multiple tags separated by
-                                            spaces or commas. Tags will be saved
-                                            when you submit the product.
                                         </div>
                                     </div>
                                 {/if}
