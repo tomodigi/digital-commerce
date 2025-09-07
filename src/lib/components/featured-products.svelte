@@ -5,6 +5,7 @@
 
     export let products: Array<{
         id: number;
+        slug: string;
         name: string;
         category: string;
         price: number;
@@ -13,7 +14,7 @@
     }> = [];
 
     $: isLoading = products.length === 0;
-    $: error = '';
+    $: error = "";
 </script>
 
 <section class="py-20">
@@ -35,12 +36,14 @@
                     <div
                         class="aspect-video overflow-hidden rounded-t-lg bg-muted"
                     >
-                        <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                        />
+                        <a href={`/products/${product.slug}`}>
+                            <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                            />
+                        </a>
                     </div>
                     <div class="flex-grow">
                         <Card.Header class="p-4">
@@ -51,14 +54,24 @@
                                     />
                                 {/each}
                             </div>
-                            <Card.Title class="text-lg font-medium">{product.name}</Card.Title>
-                            <Card.Description class="text-sm text-muted-foreground">
+                            <Card.Title class="text-lg font-medium"
+                                ><a href={`/products/${product.slug}`}
+                                    >{product.name}</a
+                                ></Card.Title
+                            >
+                            <Card.Description
+                                class="text-sm text-muted-foreground"
+                            >
                                 {product.category}
                             </Card.Description>
                         </Card.Header>
                     </div>
-                    <Card.Footer class="flex justify-between items-center p-4 pt-0 mt-auto">
-                        <span class="text-lg font-semibold">${product.price.toFixed(2)}</span>
+                    <Card.Footer
+                        class="flex justify-between items-center p-4 pt-0 mt-auto"
+                    >
+                        <span class="text-lg font-semibold"
+                            >${product.price.toFixed(2)}</span
+                        >
                         <Button size="sm">Add to Cart</Button>
                     </Card.Footer>
                 </Card.Root>

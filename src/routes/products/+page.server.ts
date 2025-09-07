@@ -11,11 +11,13 @@ interface Product {
   stars?: number | string | null;
   category_id?: number | null;
   created_at: string;
+  slug: string;
 }
 
 interface Category {
   id: number;
   name: string;
+  slug: string;
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -32,7 +34,8 @@ export const load: PageServerLoad = async (event) => {
         preview,
         stars,
         category_id,
-        created_at
+        created_at,
+        slug
       `)
       .order('created_at', { ascending: false })
       .range(0, 24);
@@ -65,6 +68,7 @@ export const load: PageServerLoad = async (event) => {
         imageUrl: previewUrls[0] || 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Image',
         stars: Number(product.stars) || 0,
         created_at: product.created_at,
+        slug: product.slug,
         preview: previewUrls
       };
     });

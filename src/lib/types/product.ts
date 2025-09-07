@@ -1,6 +1,7 @@
 import type { Database } from "$lib/supabase/types";
 export interface Product {
     name: string;
+    slug: string;
     category_id: number | null;
     compatible_browser: string[];
     compatible_with: string[];
@@ -20,6 +21,7 @@ export interface Product {
 
 export const initialProduct: Product = {
     name: "",
+    slug: "",
     category_id: null,
     compatible_browser: [],
     compatible_with: [],
