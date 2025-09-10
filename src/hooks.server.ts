@@ -10,24 +10,26 @@ export const handle: Handle = async ({ event, resolve }) => {
       getAll: () => event.cookies.getAll(),
       setAll: (cookies) => {
         cookies.forEach(({ name, value, options }) => {
-          event.cookies.set(name, value, { ...options, path: '/' })
+          event.cookies.set(name, value, {
+            path: '/',
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            ...options,
+          })
         })
       },
     },
   })
 
   event.locals.getSession = async () => {
-    const {
-      data: { session },
-    } = await event.locals.supabase.auth.getSession()
-
-    if (session) {
-      const { data: { user } } = await event.locals.supabase.auth.getUser()
-      if (user) {
-        return { ...session, user }
-      }
-    }
+    const { data: { session } } = await event.locals.supabase.auth.getSession()
     return session
+  }
+
+  event.locals.getUser = async () => {
+    const { data: { user } } = await event.locals.supabase.auth.getUser()
+    return user ?? null
   }
 
   return resolve(event, {

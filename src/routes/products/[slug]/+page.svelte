@@ -3,51 +3,13 @@
     import ProductInfo from "$lib/components/product-info.svelte";
     import ProductTabs from "$lib/components/product-tabs.svelte";
     import { Card } from "$lib/components/ui/card";
-    import { Button } from "$lib/components/ui/button";
     import type { PageData } from "./$types";
 
     export let data: PageData;
-
-    $: error = data?.error;
-    $: product = data?.product;
-    $: relatedProducts = data?.relatedProducts || [];
-
-    $: images = (() => {
-        try {
-            if (product?.preview) {
-                if (typeof product.preview === "string") {
-                    return JSON.parse(product.preview);
-                }
-                if (Array.isArray(product.preview)) {
-                    return product.preview;
-                }
-            }
-            return product?.thumbnail ? [product.thumbnail] : [];
-        } catch (e) {
-            console.error("Error parsing preview images:", e);
-            return product?.thumbnail ? [product.thumbnail] : [];
-        }
-    })();
-
-    $: processedRelatedProducts = relatedProducts.map((product) => ({
-        ...product,
-        preview: (() => {
-            try {
-                if (product.preview) {
-                    if (typeof product.preview === "string") {
-                        return JSON.parse(product.preview);
-                    }
-                    if (Array.isArray(product.preview)) {
-                        return product.preview;
-                    }
-                }
-                return [];
-            } catch (e) {
-                console.error("Error parsing related product preview:", e);
-                return [];
-            }
-        })(),
-    }));
+    const error = data?.error;
+    const product = data?.product;
+    const relatedProducts = data?.relatedProducts || [];
+    const images = product?.preview ?? [];
 </script>
 
 <div class="bg-gray-50 min-h-screen">
@@ -69,14 +31,11 @@
             <nav class="text-sm mb-6">
                 <ol class="flex flex-wrap items-center gap-2">
                     <li>
-                        <a href="/" class="text-primary hover:underline">Home</a
-                        >
+                        <a data-sveltekit-preload-data href="/" class="text-primary hover:underline">Home</a>
                     </li>
                     <li class="text-gray-400">/</li>
                     <li>
-                        <a href="/products" class="text-primary hover:underline"
-                            >Products</a
-                        >
+                        <a data-sveltekit-preload-data href="/products" class="text-primary hover:underline">Products</a>
                     </li>
                     <li class="text-gray-400">/</li>
                     <li class="text-gray-600 line-clamp-1">{product.name}</li>
@@ -99,17 +58,14 @@
                 </div>
             </div>
 
-            {#if processedRelatedProducts.length > 0}
+            {#if relatedProducts.length > 0}
                 <div class="mb-12">
                     <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
                     <div
                         class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
                     >
-                        {#each processedRelatedProducts as relatedProduct}
-                            <a
-                                href="/products/{relatedProduct.slug}"
-                                class="group"
-                            >
+                        {#each relatedProducts as relatedProduct}
+                            <a data-sveltekit-preload-data href="/products/{relatedProduct.slug}" class="group">
                                 <Card
                                     class="h-full overflow-hidden transition-shadow hover:shadow-md"
                                 >
@@ -156,9 +112,7 @@
                                             <span
                                                 class="text-primary font-semibold"
                                             >
-                                                ${Number(
-                                                    relatedProduct.price,
-                                                ).toFixed(2)}
+                                                ${Number(relatedProduct.price).toFixed(2)}
                                             </span>
                                             {#if relatedProduct.stars && Number(relatedProduct.stars) > 0}
                                                 <div class="flex items-center">
@@ -169,9 +123,7 @@
                                                     <span
                                                         class="text-sm text-gray-600 ml-1"
                                                     >
-                                                        {Number(
-                                                            relatedProduct.stars,
-                                                        ).toFixed(1)}
+                                                        {Number(relatedProduct.stars).toFixed(1)}
                                                     </span>
                                                 </div>
                                             {/if}

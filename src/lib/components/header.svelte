@@ -4,6 +4,7 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import * as NavigationMenu from "$lib/components/ui/navigation-menu/index.js";
     import { Search, ShoppingCart, Menu } from "lucide-svelte";
+    import { authLoading } from "$lib/stores/auth";
 
     export let mobileMenuOpen = false;
 
@@ -81,7 +82,15 @@
             <Button variant="ghost" size="icon">
                 <ShoppingCart class="h-5 w-5" />
             </Button>
-            {#if userEmail}
+            {#if $authLoading}
+                <div class="hidden md:flex items-center space-x-2">
+                    <svg class="h-4 w-4 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span class="text-sm text-muted-foreground">Updating…</span>
+                </div>
+            {:else if userEmail}
                 <div class="hidden md:flex items-center space-x-2">
                     <span class="text-sm font-medium">{userEmail}</span>
                     <div class="flex items-center">

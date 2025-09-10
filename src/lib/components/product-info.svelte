@@ -1,23 +1,26 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
-    import { Input } from "$lib/components/ui/input";
 
     export let product: {
         name: string;
         price: number;
         original_price?: number;
         description?: string;
-        stock: number;
         stars?: number;
         category?: { name: string; slug: string };
         tags?: string[];
-        sku?: string;
+        id?: number;
+        slug?: string;
         files_include?: string[];
         compatible_browser?: string[];
         compatible_with?: string[];
         file_type?: string;
+        file?: string;
         version?: string;
         last_updated?: string;
+        created_at?: string;
+        demo_url?: string;
+        features?: string[];
     };
 
     let quantity = 1;
@@ -37,7 +40,7 @@
     function addToCart(e: MouseEvent) {
         e.preventDefault();
         console.log("Added to cart:", {
-            productId: product.sku,
+            productId: product.slug ?? String(product.id ?? ""),
             quantity,
             license: selectedLicense,
             price:
@@ -50,7 +53,7 @@
     function addToWishlist(e: MouseEvent) {
         e.preventDefault();
         console.log("Added to wishlist:", {
-            productId: product.sku,
+            productId: product.slug ?? String(product.id ?? ""),
             name: product.name,
             price:
                 selectedLicense === "extended"
@@ -61,9 +64,8 @@
 
     function increment(e: MouseEvent) {
         e.preventDefault();
-        if (quantity < product.stock) {
-            quantity++;
-        }
+        const limit = 10;
+        if (quantity < limit) quantity++;
     }
 
     function decrement(e: MouseEvent) {
@@ -96,6 +98,16 @@
                 >
                     {product.category.name}
                 </a>
+            </p>
+        {/if}
+        {#if product.demo_url}
+            <p class="mt-2">
+                <a
+                    href={product.demo_url}
+                    class="text-primary hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer">View Live Demo</a
+                >
             </p>
         {/if}
     </div>
@@ -251,18 +263,29 @@
                     <span class="font-medium">{product.file_type}</span>
                 </div>
             {/if}
+            {#if !product.file_type && product.file}
+                <div class="flex">
+                    <span class="w-32 text-muted-foreground">File Type:</span>
+                    <span class="font-medium"
+                        >{product.file.split(".").pop()?.toUpperCase() ||
+                            "ZIP"}</span
+                    >
+                </div>
+            {/if}
             {#if product.version}
                 <div class="flex">
                     <span class="w-32 text-muted-foreground">Version:</span>
                     <span class="font-medium">{product.version}</span>
                 </div>
             {/if}
-            {#if product.last_updated}
+            {#if product.last_updated || product.created_at}
                 <div class="flex">
                     <span class="w-32 text-muted-foreground">Last Updated:</span
                     >
                     <span class="font-medium"
-                        >{formatDate(product.last_updated)}</span
+                        >{formatDate(
+                            product.last_updated || product.created_at || "",
+                        )}</span
                     >
                 </div>
             {/if}
@@ -315,6 +338,23 @@
                                 >
                                     {file}
                                 </span>
+                            {/each}
+                        </div>
+                    </div>
+                </div>
+            {/if}
+            {#if product.features?.length}
+                <div class="flex items-start">
+                    <span class="w-32 text-muted-foreground pt-1"
+                        >Features:</span
+                    >
+                    <div class="flex-1">
+                        <div class="flex flex-wrap gap-2">
+                            {#each product.features as feature}
+                                <span
+                                    class="px-2 py-1 bg-gray-100 rounded text-xs"
+                                    >{feature}</span
+                                >
                             {/each}
                         </div>
                     </div>

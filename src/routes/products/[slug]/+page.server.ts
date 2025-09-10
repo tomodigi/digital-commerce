@@ -1,96 +1,87 @@
 import type { PageServerLoad } from './$types';
-import { getSupabase } from '$lib/supabase/server';
+import { parsePreviewUrls } from '$lib/utils/product/product-utils';
+import { error } from '@sveltejs/kit';
 
-interface RelatedProduct {
+type DbProduct = {
   id: number;
   name: string;
   description?: string | null;
   price: number | string;
-  preview?: string[] | null;
+  preview?: string[] | string | null;
   stars?: number | string | null;
   category_id?: number | null;
   created_at: string;
   slug: string;
-}
+  thumbnail?: string | null;
+};
 
-export const load = (async (event) => {
-  const { params } = event;
-  const supabase = getSupabase(event);
+export const load: PageServerLoad = async ({ locals, params }) => {
+  const supabase = locals.supabase;
+  const { slug } = params;
 
   try {
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select('*')
-      .eq('slug', params.slug)
-      .maybeSingle();
+      .select(
+        `*`
+      )
+      .eq('slug', slug)
+      .single<DbProduct>();
 
-    let category = null;
-    if (product?.category_id) {
-      const { data: categoryData } = await supabase
-        .from('product_categories')
-        .select('*')
-        .eq('id', product.category_id)
-        .single();
-      category = categoryData;
-    }
+    if (productError || !product) throw error(404, 'Product not found');
 
-    if (productError) {
-      console.error('Error loading product:', productError);
+    const parsedPreview = parsePreviewUrls(product.preview ?? []);
+    const images = parsedPreview.length > 0
+      ? parsedPreview
+      : product.thumbnail
+        ? [product.thumbnail]
+        : [];
+
+    const { data: related, error: relatedError } = await supabase
+      .from('products')
+      .select(`id, name, price, stars, slug, preview, thumbnail`)
+      .neq('id', product.id)
+      .eq('category_id', product.category_id)
+      .order('created_at', { ascending: false })
+      .range(0, 3);
+
+    if (relatedError) {
       return {
-        status: 404,
-        error: 'Product not found'
+        product: {
+          ...product,
+          price: Number(product.price) || 0,
+          stars: Number(product.stars) || 0,
+          description: product.description ?? undefined,
+          preview: images
+        },
+        relatedProducts: [],
+        error: null
       };
     }
 
-    if (!product) {
+    const relatedProducts = (related ?? []).map((p) => {
+      const rPrev = parsePreviewUrls(p.preview ?? []);
       return {
-        status: 404,
-        error: 'Product not found'
+        ...p,
+        price: Number(p.price) || 0,
+        stars: Number(p.stars) || 0,
+        preview: rPrev.length > 0 ? rPrev : p.thumbnail ? [p.thumbnail] : []
       };
-    }
-
-    let relatedProducts: RelatedProduct[] = [];
-    if (product.category_id) {
-      const { data: related, error: relatedError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          slug,
-          price,
-          preview,
-          stars,
-          category_id,
-          created_at
-        `)
-        .eq('category_id', product.category_id)
-        .neq('id', product.id)
-        .limit(4);
-
-      if (!relatedError) {
-        relatedProducts = related;
-      }
-    }
+    });
 
     return {
       product: {
         ...product,
-        category,
-        price: Number(product.price),
-        stars: product.stars ? Number(product.stars) : 0,
-        features: Array.isArray(product.features) ? product.features : [],
-        tags: Array.isArray(product.tags) ? product.tags : [],
-        compatible_browser: Array.isArray(product.compatible_browser) ? product.compatible_browser : [],
-        compatible_with: Array.isArray(product.compatible_with) ? product.compatible_with : [],
-        files_include: Array.isArray(product.files_include) ? product.files_include : []
+        price: Number(product.price) || 0,
+        stars: Number(product.stars) || 0,
+        description: product.description ?? undefined,
+        preview: images
       },
-      relatedProducts
+      relatedProducts,
+      error: null
     };
-  } catch (error) {
-    console.error('Error loading product:', error);
-    return {
-      status: 500,
-      error: 'Failed to load product'
-    };
+  } catch (e) {
+    if (e instanceof Response) throw e; 
+    throw error(500, 'Failed to load product');
   }
-}) satisfies PageServerLoad;
+};

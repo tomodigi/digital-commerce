@@ -1,4 +1,3 @@
-import { getSupabase } from '$lib/supabase/server';
 import type { PageServerLoad } from './$types';
 import { parsePreviewUrls } from '$lib/utils/product/product-utils';
 
@@ -19,8 +18,8 @@ interface Category {
   name: string;
 }
 
-export const load: PageServerLoad = async (event) => {
-  const supabase = getSupabase(event);
+export const load: PageServerLoad = async ({ locals }) => {
+  const supabase = locals.supabase;
 
   try {
     const { data: products, error: productsError } = await supabase

@@ -15,17 +15,17 @@
 
     interface Product {
         name: string;
-        description: string;
-        specifications: Record<string, string | string[]>;
-        reviews: Review[];
-        file_type: string;
-        version: string;
-        last_updated: string;
-        compatible_browser: string[];
-        compatible_with: string[];
-        files_include: string[];
-        documentation: string;
-        changelog: ChangelogItem[];
+        description?: string;
+        specifications?: Record<string, string | string[]>;
+        reviews?: Review[];
+        file_type?: string;
+        version?: string;
+        last_updated?: string;
+        compatible_browser?: string[];
+        compatible_with?: string[];
+        files_include?: string[];
+        documentation?: string;
+        changelog?: ChangelogItem[];
     }
 
     export let product: Product = {
@@ -64,20 +64,25 @@
         return new Date(dateString).toLocaleDateString(undefined, options);
     }
 
-    $: if (product) {
-        product.reviews = product.reviews || getDefaultReviews();
-        product.specifications = product.specifications || getDefaultSpecs();
-
-        if (!product.changelog || !Array.isArray(product.changelog)) {
-            product.changelog = getDefaultChangelog();
-        } else {
-            product.changelog = product.changelog.map((item) => ({
-                version: item.version || "1.0.0",
-                date: item.date || new Date().toISOString(),
-                changes: Array.isArray(item.changes) ? item.changes : [],
-            }));
-        }
-    }
+    $: reviews =
+        product?.reviews && product.reviews.length > 0
+            ? product.reviews
+            : getDefaultReviews();
+    $: specifications =
+        product?.specifications &&
+        Object.keys(product.specifications).length > 0
+            ? product.specifications
+            : getDefaultSpecs();
+    $: normalizedChangelog = (() => {
+        const source = Array.isArray(product?.changelog)
+            ? (product?.changelog ?? [])
+            : getDefaultChangelog();
+        return source.map((item) => ({
+            version: item.version || "1.0.0",
+            date: item.date || new Date().toISOString(),
+            changes: Array.isArray(item.changes) ? item.changes : [],
+        }));
+    })();
 
     function getDefaultReviews(): Review[] {
         return [
@@ -136,6 +141,8 @@
     function selectTab(tabId: string) {
         activeTab = tabId;
     }
+
+    $: changelog = (normalizedChangelog ?? []) as ChangelogItem[];
 </script>
 
 <!-- Main Template -->
@@ -212,7 +219,7 @@
                         Product Specifications
                     </h3>
                     <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {#each Object.entries(product.specifications || {}) as [key, value]}
+                        {#each Object.entries(specifications || {}) as [key, value]}
                             <div class="bg-gray-50 p-4 rounded-lg">
                                 <dt class="text-sm font-medium text-gray-500">
                                     {key}
@@ -387,15 +394,15 @@
 
                 <div class="flow-root">
                     <ul class="-mb-8">
-                        {#if product.changelog.length === 0}
+                        {#if changelog.length === 0}
                             <li class="text-center py-8 text-gray-500">
                                 No changelog available
                             </li>
                         {:else}
-                            {#each product.changelog as item, i}
+                            {#each changelog as item, i}
                                 <li>
                                     <div class="relative pb-8">
-                                        {#if i !== product.changelog.length - 1}
+                                        {#if i !== changelog.length - 1}
                                             <span
                                                 class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
                                                 aria-hidden="true"
@@ -457,7 +464,7 @@
             </div>
         {:else if activeTab === "reviews"}
             <div class="space-y-6">
-                {#if product.reviews && product.reviews.length > 0}
+                {#if reviews && reviews.length > 0}
                     <div>
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-medium">
@@ -469,11 +476,11 @@
                                         <svg
                                             class="h-5 w-5 {star <=
                                             Math.round(
-                                                product.reviews.reduce(
+                                                reviews.reduce(
                                                     (acc, review) =>
                                                         acc + review.rating,
                                                     0,
-                                                ) / product.reviews.length,
+                                                ) / reviews.length,
                                             )
                                                 ? 'text-yellow-400'
                                                 : 'text-gray-300'}"
@@ -488,18 +495,18 @@
                                     {/each}
                                     <span class="ml-2 text-sm text-gray-600">
                                         {(
-                                            product.reviews.reduce(
+                                            reviews.reduce(
                                                 (acc, review) =>
                                                     acc + review.rating,
                                                 0,
-                                            ) / product.reviews.length
+                                            ) / reviews.length
                                         ).toFixed(1)} out of 5
                                     </span>
                                 </div>
                                 <span class="mx-2 text-gray-300">•</span>
                                 <span class="text-sm text-gray-600">
-                                    {product.reviews.length}
-                                    {product.reviews.length === 1
+                                    {reviews.length}
+                                    {reviews.length === 1
                                         ? "review"
                                         : "reviews"}
                                 </span>
@@ -507,7 +514,7 @@
                         </div>
 
                         <div class="mt-8 space-y-8">
-                            {#each product.reviews as review}
+                            {#each reviews as review}
                                 <div class="border-t border-gray-200 pt-8">
                                     <div class="flex items-center">
                                         <div

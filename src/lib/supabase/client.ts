@@ -17,7 +17,7 @@ export async function getSupabase(): Promise<SupabaseClient> {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false, // Disable Supabase's built-in URL session detection
+        detectSessionInUrl: true, // Enable URL session detection so OAuth redirects update state immediately
       },
     }) as unknown as SupabaseClient
   }
