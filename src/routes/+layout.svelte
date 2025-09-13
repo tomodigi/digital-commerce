@@ -10,28 +10,21 @@
 
   export let data: LayoutData;
 
-  let session: Session | null = null;
   let user: User | null = null;
 
-  $: session = data.session;
-  $: user = (data.user as User | null) || session?.user || null;
+  $: user = (data.user as User | null) || null;
 
   onMount(() => {
     let unsubscribe: (() => void) | null = null;
     getSupabase().then(async (supabase) => {
       try {
         authLoading.set(true);
-        const {
-          data: { session: current },
-        } = await supabase.auth.getSession();
-        if (current) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
           await fetch("/auth/session", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              event: "INITIAL_SESSION",
-              session: current,
-            }),
+            body: JSON.stringify({ event: "INITIAL_SESSION" }),
           });
           await invalidate("supabase:auth");
         }
@@ -44,15 +37,15 @@
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
         async (event: AuthChangeEvent, newSession: Session | null) => {
-          session = newSession ?? null;
-          user = newSession?.user ?? null;
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          user = authUser ?? null;
 
           try {
             authLoading.set(true);
             await fetch("/auth/session", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ event, session: newSession }),
+              body: JSON.stringify({ event }),
             });
           } finally {
             await invalidate("supabase:auth");

@@ -37,26 +37,30 @@ export const load: PageServerLoad = async ({ locals, params }) => {
         ? [product.thumbnail]
         : [];
 
-    const { data: related, error: relatedError } = await supabase
+    let relatedQuery = supabase
       .from('products')
       .select(`id, name, price, stars, slug, preview, thumbnail`)
       .neq('id', product.id)
-      .eq('category_id', product.category_id)
-      .order('created_at', { ascending: false })
-      .range(0, 3);
+      .order('created_at', { ascending: false });
 
-    if (relatedError) {
-      return {
-        product: {
-          ...product,
-          price: Number(product.price) || 0,
-          stars: Number(product.stars) || 0,
-          description: product.description ?? undefined,
-          preview: images
-        },
-        relatedProducts: [],
-        error: null
-      };
+    if (product.category_id !== null && product.category_id !== undefined) {
+      relatedQuery = relatedQuery.eq('category_id', product.category_id);
+    }
+
+    let { data: related, error: relatedError } = await relatedQuery.range(0, 3);
+
+    if (relatedError || !related || related.length === 0) {
+      const fallback = await supabase
+        .from('products')
+        .select(`id, name, price, stars, slug, preview, thumbnail`)
+        .neq('id', product.id)
+        .order('created_at', { ascending: false })
+        .range(0, 3);
+
+      if (!relatedError) {
+        relatedError = fallback.error ?? null;
+      }
+      related = fallback.data ?? [];
     }
 
     const relatedProducts = (related ?? []).map((p) => {
@@ -81,7 +85,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
       error: null
     };
   } catch (e) {
-    if (e instanceof Response) throw e; 
+    if (e instanceof Response) throw e;
     throw error(500, 'Failed to load product');
   }
 };
